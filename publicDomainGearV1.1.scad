@@ -78,19 +78,16 @@ module gear (
 	assign(t  = mm_per_tooth/2-backlash/2)                //tooth thickness at pitch circle
 	assign(k  = -iang(b, p) - t/2/p/pi*180) {             //angle to where involute meets base circle on each side of tooth
 		difference() {
-			union() for (i = [0:number_of_teeth-teeth_to_hide-1] )
-				rotate([0,0,i*360/number_of_teeth])
-          render() 
-					linear_extrude(height = thickness, center = true, convexity = 20)
+				linear_extrude(height = thickness, center = true, convexity = 20) union() for (i = [0:number_of_teeth-teeth_to_hide-1] )
+				  rotate([0,0,i*360/number_of_teeth])
+            // render() 
 						polygon(
 							points=[
 								[0, -hole_diameter/10],
 								polar(r, -181/number_of_teeth),
 								polar(r, r<b ? k : -180/number_of_teeth),
-								q7(0/10,r,b,c,k, 1),q7(1/10,r,b,c,k, 1),q7(2/10,r,b,c,k, 1),q7(3/10,r,b,c,k, 1),q7(4/10,r,b,c,k, 1),q7(5/10,r,b,c,k, 1),
-								q7(6/10,r,b,c,k, 1),q7(7/10,r,b,c,k, 1),q7(8/10,r,b,c,k, 1),q7(9/10,r,b,c,k, 1),q7(10/10,r,b,c,k, 1),
-								q7(10/10,r,b,c,k,-1),q7(9/10,r,b,c,k,-1),q7(8/10,r,b,c,k,-1),q7(7/10,r,b,c,k,-1),q7(6/10,r,b,c,k,-1),q7(5/10,r,b,c,k,-1),
-								q7(4/10,r,b,c,k,-1),q7(3/10,r,b,c,k,-1),q7(2/10,r,b,c,k,-1),q7(1/10,r,b,c,k,-1),q7(0/10,r,b,c,k,-1),
+								q7(0/3,r,b,c,k, 1),q7(1/3,r,b,c,k, 1),q7(2/3,r,b,c,k, 1),q7(3/3,r,b,c,k, 1),
+                q7(3/3,r,b,c,k,-1),q7(2/3,r,b,c,k,-1),q7(1/3,r,b,c,k,-1),q7(0/3,r,b,c,k,-1),
 								polar(r, r<b ? -k : 180/number_of_teeth),
 								polar(r, 181/number_of_teeth)
 							],
@@ -146,25 +143,7 @@ function module_value    (mm_per_tooth=3) = mm_per_tooth / pi;                //
 function pitch_radius    (mm_per_tooth=3,number_of_teeth=11) = mm_per_tooth * number_of_teeth / 3.1415926 / 2;
 function outer_radius    (mm_per_tooth=3,number_of_teeth=11,clearance=0.1)    //The gear fits entirely within a cylinder of this radius.
 	= mm_per_tooth*(1+number_of_teeth/2)/3.1415926  - clearance;              
-
-function p(
-  mm_per_tooth    = 3,    //this is the "circular pitch", the circumference of the pitch circle divided by the number of teeth
-  number_of_teeth = 11    //total number of teeth around the entire perimeter
-) = mm_per_tooth * number_of_teeth / 3.1415926 / 2;
-
-function c(
-  mm_per_tooth    = 3,    //this is the "circular pitch", the circumference of the pitch circle divided by the number of teeth
-  number_of_teeth = 11,   //total number of teeth around the entire perimeter
-  clearance       = 0.0   //gap between top of a tooth on one gear and bottom of valley on a meshing gear (in millimeters)
-) = p(mm_per_tooth, number_of_teeth) + mm_per_tooth / 3.1415926 - clearance;
-
-function root_radius(
-  mm_per_tooth = 3,
-  number_of_teeth = 11,   //total number of teeth around the entire perimeter
-  clearance       = 0.0,  //gap between top of a tooth on one gear and bottom of valley on a meshing gear (in millimeters)
-) = p(mm_per_tooth, number_of_teeth)-(c(mm_per_tooth, number_of_teeth, clearance)-p(mm_per_tooth, number_of_teeth))-clearance;
-
-
+function center_distance (mm_per_tooth=3, num_teeth1=10, num_teeth2=10) = pitch_radius(mm_per_tooth, num_teeth1) + pitch_radius(mm_per_tooth, num_teeth2);
 //////////////////////////////////////////////////////////////////////////////////////////////
 //example gear train.  
 //Try it with OpenSCAD View/Animate command with 20 steps and 24 FPS.
