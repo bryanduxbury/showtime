@@ -302,4 +302,4 @@ module panelized() {
 assembled();
 
 // !mock_motor();
-!drive_gear();
+// !drive_gear();
