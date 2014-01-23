@@ -15,9 +15,10 @@ washer_od = 8;
 washer_t = 1;
 
 opening_radius = 2 * 25.4;
+frame_border_w = 10;
 
 hand_gear_num_teeth = 150;
-hand_width = 10;
+hand_width = 8;
 minute_hand_length = opening_radius - 5;
 hour_hand_length = minute_hand_length - 10;
 
@@ -27,8 +28,13 @@ faceplate_height = 100;
 
 // gear parameters
 mm_per_tooth = 3;
-drive_gear_num_teeth = 36;
+drive_gear_num_teeth = 32;
 retaining_gear_num_teeth = 12;
+
+function frame_w() = opening_radius*2 + frame_border_w*2;
+function drive_gear_distance() = center_distance(mm_per_tooth=mm_per_tooth, num_teeth1=hand_gear_num_teeth, num_teeth2=drive_gear_num_teeth);
+function motor_covering_radius() = motor_hole_distance/2 * sqrt(2) + 3;
+function motor_rotation_angle() = 90-asin((frame_w()/2+motor_covering_radius()) / drive_gear_distance());
 
 module _hexagon(sr,thickness) {
   union() for (a=[0:2]) {
@@ -66,6 +72,15 @@ module _washer() {
   }
 }
 
+module _screw(shaft_len=3, shaft_diameter=3, head_thickness=2, head_diameter=4) {
+  color([128/255, 128/255, 128/255])
+  render()
+  union() {
+    translate([0, 0, head_thickness/2]) cylinder(r=head_diameter/2, h=head_thickness, center=true, $fn=36);
+    translate([0, 0, -shaft_len/2]) cylinder(r=shaft_diameter/2, h=shaft_len, center=true, $fn=36);
+  }
+}
+
 
 motor_shaft_d = 5;
 motor_shaft_length = 22;
@@ -73,11 +88,17 @@ motor_side_w = 35.2;
 motor_length = 28;
 motor_hole_distance = 26.2;
 motor_screw_hole_d = 3;
+motor_screw_head_d = 4;
+motor_screw_head_t = 2;
 motor_dais_r = 11;
 motor_dais_t = 2;
 motor_shaft_flattened_length = 10;
 motor_shaft_flattened_depth = 0.5;
 
+
+module _motor_mounting_screw(len) {
+  _screw(shaft_len=len, shaft_diameter=motor_screw_hole_d, head_thickness=motor_screw_head_t, head_diameter=motor_screw_head_d);
+}
 
 module mock_motor() {
   color([192/255, 192/255, 192/255])
@@ -121,7 +142,7 @@ module outer_retainer() {
 }
 
 module hand_gear() {
-  color([64/255, 64/255, 255/255, 0.5])
+  color([240/255, 240/255, 240/255, 0.25])
   render() 
   gear(mm_per_tooth=mm_per_tooth, number_of_teeth=hand_gear_num_teeth, hole_diameter=0.1, thickness=t);
 }
@@ -150,16 +171,16 @@ module minute_hand_assembly() {
 
 module retainer_base() {
   union() {
-    cube(size=[opening_radius*2+20, opening_radius*2+20, t], center=true);
+    cube(size=[frame_w(), frame_w(), t], center=true);
     for (i=[0:1]) rotate([0, 0, 180*i]) {
-      rotate([0, 0, 25]) 
-      translate([-center_distance(mm_per_tooth=mm_per_tooth, num_teeth1=hand_gear_num_teeth, num_teeth2=drive_gear_num_teeth), 0, 0]) 
+      rotate([0, 0, motor_rotation_angle()])
+      translate([-drive_gear_distance(), 0, 0])
       difference() {
         union() {
-          cylinder(r=motor_side_w/2*sqrt(2)+2.5, h=t, center=true, $fn=72);
-          rotate([0, 0, 25]) 
+          cylinder(r=motor_covering_radius(), h=t, center=true, $fn=72);
+          rotate([0, 0, -motor_rotation_angle()]) 
             translate([opening_radius, 0, 0]) 
-              cube(size=[opening_radius*2, 2*(motor_side_w/2*sqrt(2)+2.5), t], center=true);
+              cube(size=[opening_radius*2, 2*(motor_covering_radius()), t], center=true);
         }
 
         cylinder(r=motor_shaft_d/2+1, h=t*2, center=true, $fn=36);
@@ -179,8 +200,8 @@ module inner_retainer() {
   difference() {
     retainer_base();
     for (i=[0:1]) rotate([0, 0, 180*i]) {
-      rotate([0, 0, 25]) 
-      translate([-center_distance(mm_per_tooth=mm_per_tooth, num_teeth1=hand_gear_num_teeth, num_teeth2=drive_gear_num_teeth), 0, 0]) {
+      rotate([0, 0, motor_rotation_angle()]) 
+      translate([-drive_gear_distance(), 0, 0]) {
         for (a=[0:3]) {
           rotate([0, 0, 90*a]) 
             translate([motor_hole_distance/2, motor_hole_distance/2, 0]) 
@@ -199,6 +220,21 @@ module assembled() {
   translate([0, 0, -t * 4 - washer_t*4]) {
     inner_retainer();
   }
+
+  translate([0, 0, -t * 4 - washer_t*4 + t/2]) {
+    for (i=[0:1]) rotate([0, 0, 180*i]) {
+      rotate([0, 0, motor_rotation_angle()]) 
+      translate([-drive_gear_distance(), 0, 0]) {
+        for (a=[0:3]) {
+          rotate([0, 0, 90*a]) 
+            translate([motor_hole_distance/2, motor_hole_distance/2, 0]) 
+              _motor_mounting_screw(15);
+        }
+      }
+    }
+    
+  }
+  
   translate([0, 0, -t * 3 - washer_t*3]) {
     minute_hand_assembly();
     for (a=[0:3]) {
@@ -207,13 +243,13 @@ module assembled() {
         retaining_gear();
     }
 
-    rotate([0, 0, 25]) 
-    translate([center_distance(mm_per_tooth=mm_per_tooth, num_teeth1=hand_gear_num_teeth, num_teeth2=drive_gear_num_teeth), 0, 0]) 
+    rotate([0, 0, motor_rotation_angle()]) 
+    translate([drive_gear_distance(), 0, 0]) 
       rotate([0, 0, 360/drive_gear_num_teeth/2]) 
       drive_gear();
   }
   translate([0, 0, -t * 2 - washer_t*2]) {
-    middle_retainer();
+    // middle_retainer();
   }
 
   translate([0, 0, -t - washer_t]) {
@@ -224,21 +260,20 @@ module assembled() {
         retaining_gear();
     }
 
-    rotate([0, 0, 25]) 
-    translate([-center_distance(mm_per_tooth=mm_per_tooth, num_teeth1=hand_gear_num_teeth, num_teeth2=drive_gear_num_teeth), 0, 0]) {
+    rotate([0, 0, motor_rotation_angle()]) 
+    translate([-drive_gear_distance(), 0, 0]) 
       rotate([0, 0, 360/drive_gear_num_teeth/2]) 
       drive_gear();
-    }
   }
 
   translate([0, 0, -motor_shaft_length]) for (i=[0:1]) rotate([0, 0, 180*i]) {
-    rotate([0, 0, 25]) 
+    rotate([0, 0, motor_rotation_angle()]) 
     translate([-center_distance(mm_per_tooth=mm_per_tooth, num_teeth1=hand_gear_num_teeth, num_teeth2=drive_gear_num_teeth), 0, 0]) {
       mock_motor();
     }
   }
 
-  outer_retainer();
+  // outer_retainer();
 }
 
 module panelized() {
@@ -247,5 +282,6 @@ module panelized() {
 
 assembled();
 
+// !_motor_mounting_screw(3);
 // !mock_motor();
 // !drive_gear();
